@@ -1,5 +1,6 @@
 /* Офлайн-кэш приложения «Графики работы» */
-const CACHE = "grafik-v6";
+const CACHE = "grafik-v7";
+const VERSION = "7";
 const ASSETS = [
   "./",
   "./index.html",
@@ -11,13 +12,19 @@ const ASSETS = [
   "./icons/favicon.svg"
 ];
 
+// Скачиваем каждый файл с уникальным ?v=, чтобы обойти кэш GitHub Pages:
+// иначе после обновления в офлайн-кэш мог попасть старый index.html.
 self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE)
-      .then(cache => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
-      .catch(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await Promise.all(ASSETS.map(async (u) => {
+      try {
+        const res = await fetch(new Request(u + (u.includes("?") ? "&" : "?") + "v=" + VERSION, { cache: "reload" }));
+        if (res && res.ok) await cache.put(u, res.clone());
+      } catch (e) { /* файл просто не закэшируется */ }
+    }));
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener("activate", event => {
