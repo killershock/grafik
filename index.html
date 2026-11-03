@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e1421">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Графики">
+<meta name="description" content="Календарь смен: свои графики работы и графики друзей. Работает офлайн.">
+<title>Графики работы</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="icon" href="icons/icon-512.png" sizes="512x512">
+<style>
+  :root{
+    --bg:#0b101a;
+    --bg2:#0e1421;
+    --card:#141c2b;
+    --card2:#182234;
+    --line:#243147;
+    --line2:#2e3d57;
+    --txt:#e8eefc;
+    --muted:#8fa0bd;
+    --accent:#4f8cff;
+    --accent2:#7ab0ff;
+    --danger:#ff6b6b;
+    --ok:#2ecc71;
+    --radius:16px;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(900px 500px at 10% -10%, #1b2b47 0%, transparent 60%),
+      radial-gradient(700px 400px at 100% 0%, #1a2438 0%, transparent 55%),
+      var(--bg);
+    color:var(--txt);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:15px;
+    -webkit-text-size-adjust:100%;
+    min-height:100vh;
+  }
+  button{font-family:inherit;color:inherit;cursor:pointer}
+  h1,h2,h3,p{margin:0}
+  .app{max-width:1240px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left))}
+  body.standalone .app{padding-top:calc(22px + env(safe-area-inset-top))}
+
+  /* ---------- top bar ---------- */
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{
+    width:44px;height:44px;border-radius:14px;flex:none;
+    background:linear-gradient(145deg,#4f8cff,#8a5cff);
+    display:grid;place-items:center;font-weight:800;font-size:20px;color:#fff;
+    box-shadow:0 8px 20px rgba(79,140,255,.35);
+  }
+  h1{font-size:19px;font-weight:700;letter-spacing:.2px}
+  .todayline{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .todayline b{color:var(--txt);font-weight:600}
+  .top-actions{display:flex;align-items:center;gap:8px}
+  .seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px;gap:2px}
+  .seg button{
+    border:0;background:transparent;color:var(--muted);font-size:13px;font-weight:600;
+    padding:7px 12px;border-radius:9px;transition:.15s;white-space:nowrap;
+  }
+  .seg button:hover{color:var(--txt)}
+  .seg button.on{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(79,140,255,.35)}
+  .icon-btn{
+    width:38px;height:38px;flex:none;border-radius:11px;border:1px solid var(--line);
+    background:var(--card);color:var(--txt);font-size:19px;line-height:1;display:grid;place-items:center;
+    transition:.15s;
+  }
+  .icon-btn:hover{background:var(--card2);border-color:var(--line2)}
+  .ghost-btn{
+    border:1px solid var(--line);background:transparent;color:var(--muted);
+    font-size:13px;font-weight:600;padding:8px 13px;border-radius:11px;transition:.15s;
+  }
+  .ghost-btn:hover{color:var(--txt);border-color:var(--line2);background:var(--card2)}
+  .ghost-btn.wide{width:100%;margin-top:12px}
+  .primary-btn{
+    border:0;background:linear-gradient(145deg,#4f8cff,#3f6fe0);color:#fff;font-weight:700;
+    padding:11px 18px;border-radius:12px;font-size:14px;box-shadow:0 6px 16px rgba(79,140,255,.3);
+  }
+  .primary-btn:hover{filter:brightness(1.08)}
+  .danger-btn{
+    border:1px solid rgba(255,107,107,.35);background:rgba(255,107,107,.08);color:#ff9b9b;
+    font-weight:600;padding:11px 16px;border-radius:12px;font-size:14px;
+  }
+  .danger-btn:hover{background:rgba(255,107,107,.16)}
+
+  /* ---------- layout ---------- */
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;align-items:start}
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,0));
+    background-color:var(--card);
+    border:1px solid var(--line);border-radius:var(--radius);padding:16px;
+    box-shadow:var(--shadow);
+  }
+  .card h3{font-size:13px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);font-weight:700}
+  .card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .sidebar{display:grid;gap:16px}
+
+  /* ---------- calendar ---------- */
+  .cal-head{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .cal-head h2{font-size:17px;font-weight:700;min-width:170px;text-align:center}
+  .cal-head .ghost-btn{margin-left:auto}
+  .weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+  .weekdays span{text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 0}
+  .weekdays span:nth-child(6),.weekdays span:nth-child(7){color:#ff9b9b99}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cell{
+    position:relative;border:1px solid var(--line);background:var(--card2);border-radius:12px;
+    padding:6px 6px 5px;min-height:96px;text-align:left;display:flex;flex-direction:column;gap:4px;
+    transition:.13s;overflow:hidden;
+  }
+  .cell:hover{border-color:var(--line2);transform:translateY(-1px)}
+  .cell.out{opacity:.34}
+  .cell.weekend{background:#18243a}
+  .cell.today{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset,0 6px 18px rgba(79,140,255,.18)}
+  .cell.today .dnum{color:#fff;background:var(--accent);border-radius:8px}
+  .dnum{
+    font-size:12.5px;font-weight:700;color:var(--muted);width:23px;height:23px;
+    display:grid;place-items:center;flex:none;font-variant-numeric:tabular-nums;
+  }
+  .cell.today .dnum{width:23px}
+  .cell.night::after{
+    content:"☾";position:absolute;top:2px;right:6px;font-size:12px;line-height:1.2;
+    color:#9dc0ff;opacity:.9;pointer-events:none;
+  }
+  .chips{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;max-width:100%}
+  .chip .moon{font-style:normal;font-size:10px;color:#c3d8ff;flex:none;opacity:.9}
+  .night-badge{
+    font-size:10.5px;font-weight:700;color:#b8d1ff;background:rgba(79,140,255,.14);
+    border:1px solid rgba(79,140,255,.35);border-radius:6px;padding:1px 5px;white-space:nowrap;
+  }
+  .chip{
+    display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.25;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:7px;padding:2px 5px;min-width:0;
+    background:color-mix(in srgb, var(--c) 16%, transparent);
+    border-color:color-mix(in srgb, var(--c) 40%, transparent);
+    color:color-mix(in srgb, var(--c) 75%, #ffffff);
+  }
+  .chip i{width:6px;height:6px;border-radius:50%;background:var(--c);flex:none}
+  .chip b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip.more{background:transparent;border-color:transparent;color:var(--muted);padding-left:2px}
+  .legend{display:flex;flex-wrap:wrap;gap:7px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line)}
+  .legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--card2);border:1px solid var(--line);border-radius:20px;padding:4px 10px}
+  .legend i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+
+  /* ---------- people list ---------- */
+  .people-list{display:grid;gap:8px;margin-top:12px}
+  .person{
+    display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--line);
+    border-radius:12px;padding:9px 10px;transition:.13s;min-width:0;
+  }
+  .person:hover{border-color:var(--line2)}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none;box-shadow:0 0 0 3px rgba(255,255,255,.06)}
+  .person .info{min-width:0;flex:1}
+  .person .nm{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+  .person .nm .me{font-size:10px;font-weight:700;color:var(--accent2);border:1px solid rgba(79,140,255,.4);border-radius:5px;padding:0 4px;line-height:1.5}
+  .person .sub{font-size:11.5px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .person .edit{border:0;background:transparent;color:var(--muted);font-size:15px;padding:4px 6px;border-radius:8px;flex:none}
+  .person .edit:hover{background:var(--line);color:var(--txt)}
+  .empty{font-size:12.5px;color:var(--muted);padding:10px 2px;line-height:1.45}
+
+  .upcoming{display:grid;gap:7px;margin-top:12px}
+  .up{
+    display:flex;align-items:center;gap:10px;border-radius:11px;padding:8px 10px;
+    background:var(--card2);border:1px solid var(--line);
+  }
+  .up .when{font-size:12px;font-weight:700;min-width:74px;color:var(--accent2)}
+  .up .what{font-size:11.5px;color:var(--muted);margin-left:auto;text-align:right}
+  .up.today{border-color:rgba(46,204,113,.4);background:rgba(46,204,113,.08)}
+  .up.today .when{color:#5fe08f}
+
+  /* ---------- modals ---------- */
+  .modal{
+    position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+    background:rgba(4,7,12,.72);backdrop-filter:blur(4px);padding:18px;
+  }
+  .modal[hidden]{display:none}
+  .sheet{
+    width:100%;max-width:520px;max-height:88vh;overflow:auto;background:var(--bg2);
+    border:1px solid var(--line2);border-radius:20px;box-shadow:0 30px 70px rgba(0,0,0,.6);
+    animation:pop .16s ease-out;
+  }
+  @keyframes pop{from{transform:translateY(10px) scale(.98);opacity:.6}to{transform:none;opacity:1}}
+  .sheet-head{
+    display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    padding:16px 16px 10px;position:sticky;top:0;background:var(--bg2);z-index:2;
+    border-bottom:1px solid var(--line);
+  }
+  .sheet-head h3{font-size:16px;font-weight:700;line-height:1.3}
+  .sheet-head .sub{font-size:12px;color:var(--muted);margin-top:3px}
+  .sheet-body{padding:14px 16px 18px}
+
+  .day-row{
+    display:flex;align-items:center;gap:10px;padding:10px;border-radius:13px;
+    background:var(--card);border:1px solid var(--line);margin-bottom:9px;flex-wrap:wrap;
+  }
+  .day-row .who{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+  .day-row .who .nm{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .day-row .status{font-size:11.5px;color:var(--muted);margin-left:auto;white-space:nowrap}
+  .day-row .status.work{color:#5fe08f}
+  .row-actions{display:flex;gap:6px;width:100%;align-items:center;flex-wrap:wrap}
+  .time-row{display:flex;gap:6px;width:100%;align-items:center}
+  .time-row .tl{font-size:11.5px;color:var(--muted);margin-right:1px}
+  .time-row .time-in{flex:1;min-width:0;max-width:132px}
+  .minibtn{
+    border:1px solid var(--line2);background:var(--card2);color:var(--muted);
+    font-size:12px;font-weight:600;padding:6px 10px;border-radius:9px;transition:.13s;
+  }
+  .minibtn:hover{color:var(--txt);border-color:#3d5170}
+  .minibtn.on{background:rgba(46,204,113,.16);border-color:rgba(46,204,113,.5);color:#7ff0a8}
+  .minibtn.on.off{background:rgba(255,107,107,.14);border-color:rgba(255,107,107,.45);color:#ff9b9b}
+  .minibtn.link{border-color:transparent;background:transparent;text-decoration:underline;color:var(--muted);padding:6px 4px}
+  .time-in{
+    background:var(--card2);border:1px solid var(--line2);border-radius:9px;color:var(--txt);
+    padding:6px 7px;font-size:12.5px;font-family:inherit;font-variant-numeric:tabular-nums;
+  }
+  .time-in::-webkit-calendar-picker-indicator{filter:invert(.7)}
+
+  /* ---------- forms ---------- */
+  .field{margin-bottom:14px}
+  .field > label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.3px}
+  .inp{
+    width:100%;background:var(--card2);border:1px solid var(--line2);border-radius:11px;color:var(--txt);
+    padding:10px 12px;font-size:14px;font-family:inherit;outline:none;transition:.13s;
+  }
+  .inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(79,140,255,.16)}
+  .inp::placeholder{color:#6b7c99}
+  .row2{display:flex;gap:10px}
+  .row2 > *{flex:1;min-width:0}
+  .swatches{display:flex;gap:8px;flex-wrap:wrap}
+  .sw{width:30px;height:30px;border-radius:50%;border:2px solid transparent;background:var(--c);transition:.13s;position:relative}
+  .sw.on{border-color:#fff;transform:scale(1.08);box-shadow:0 0 0 3px rgba(255,255,255,.12)}
+  .check{display:flex;align-items:center;gap:9px;font-size:13.5px;color:var(--txt);cursor:pointer}
+  .check input{width:17px;height:17px;accent-color:var(--accent);cursor:pointer;flex:none}
+  .hint{font-size:11.5px;color:var(--muted);line-height:1.45;margin-top:6px}
+  .hint code{background:var(--card2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11px}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .presets button{
+    border:1px solid var(--line2);background:var(--card2);color:var(--muted);border-radius:8px;
+    padding:5px 9px;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;
+  }
+  .presets button:hover{color:var(--txt);border-color:var(--accent);background:rgba(79,140,255,.12)}
+  .wdays{display:flex;gap:5px;flex-wrap:wrap}
+  .wdays button{
+    flex:1;min-width:38px;border:1px solid var(--line2);background:var(--card2);color:var(--muted);
+    border-radius:9px;padding:8px 0;font-size:12px;font-weight:700;
+  }
+  .wdays button.on{background:rgba(79,140,255,.2);border-color:var(--accent);color:#cfe0ff}
+  .wdays button.night{background:rgba(176,107,255,.24);border-color:#b06bff;color:#eadcff}
+  .cycle-editor{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .cycle-editor button{
+    width:32px;height:32px;border-radius:9px;border:1px solid var(--line2);background:var(--card2);
+    color:var(--muted);font-size:12.5px;font-weight:800;padding:0;transition:.13s;
+  }
+  .cycle-editor button:hover{transform:translateY(-1px)}
+  .cycle-editor button.d{background:rgba(79,140,255,.22);border-color:rgba(79,140,255,.6);color:#d6e4ff}
+  .cycle-editor button.n{background:rgba(176,107,255,.22);border-color:rgba(176,107,255,.65);color:#eadcff}
+  .cycle-editor button.v{color:#6b7c99}
+  .preview{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+  .pv{
+    width:34px;border-radius:8px;border:1px solid var(--line);background:var(--card2);
+    text-align:center;padding:3px 0 4px;position:relative;
+  }
+  .pv.night::after{content:"☾";position:absolute;top:0;right:3px;font-size:8px;color:#9dc0ff}
+  .pv .d{font-size:9px;color:var(--muted);display:block}
+  .pv .s{font-size:11px;font-weight:700;display:block;margin-top:1px;color:#6b7c99}
+  .pv.work{border-color:rgba(46,204,113,.4);background:rgba(46,204,113,.1)}
+  .pv.work .s{color:#5fe08f}
+  .sheet-actions{display:flex;gap:9px;margin-top:18px}
+  .sheet-actions .primary-btn{flex:1}
+  .divider{height:1px;background:var(--line);margin:16px 0}
+  .about{font-size:12px;color:var(--muted);line-height:1.55}
+  .about b{color:var(--txt)}
+
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);z-index:99;
+    background:#1d2941;border:1px solid var(--line2);color:var(--txt);border-radius:12px;
+    padding:11px 18px;font-size:13px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.22s;
+    max-width:90vw;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:minmax(0,1fr)}
+    .sidebar{order:2}
+    .cal-head h2{min-width:0;flex:1}
+    .cell{min-height:64px;padding:5px 4px;border-radius:10px;gap:3px}
+    .chips{flex-direction:row;flex-wrap:wrap;gap:2px}
+    .chip{padding:0;background:transparent;border:0;width:7px;height:7px;border-radius:50%;overflow:hidden;position:relative}
+    .chip i{width:100%;height:100%;display:block}
+    .chip b{display:none}
+    .chip.more{width:auto;height:auto;font-size:9px;background:transparent}
+    .chip.more::after{content:attr(data-n);color:var(--muted)}
+    .dnum{font-size:11.5px;width:21px;height:21px}
+    .weekdays span{font-size:10.5px}
+    .grid{gap:4px}
+    .modal{padding:0;align-items:flex-end}
+    .sheet{max-width:none;max-height:92vh;border-radius:20px 20px 0 0;border-bottom:0}
+    .top-actions{width:100%;justify-content:space-between}
+    .seg{flex:1}
+    .seg button{flex:1}
+  }
+  @media (max-width:420px){
+    .app{padding:14px 10px 32px}
+    h1{font-size:17px}
+    .card{padding:13px}
+    .cell{min-height:56px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">Г</div>
+      <div>
+        <h1>Графики работы</h1>
+        <p class="todayline" id="todayLine">—</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="seg" id="filterSeg">
+        <button data-filter="all" class="on">Все</button>
+        <button data-filter="me">Только я</button>
+      </div>
+      <button class="icon-btn" id="btnSettings" title="Настройки и данные" aria-label="Настройки и данные">⚙</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <section class="card cal-card">
+      <div class="cal-head">
+        <button class="icon-btn" id="prevMonth" aria-label="Предыдущий месяц">‹</button>
+        <h2 id="monthTitle">—</h2>
+        <button class="icon-btn" id="nextMonth" aria-label="Следующий месяц">›</button>
+        <button class="ghost-btn" id="btnToday">Сегодня</button>
+      </div>
+      <div class="weekdays" id="weekdays"></div>
+      <div class="grid" id="grid"></div>
+      <div class="legend" id="legend"></div>
+      <p class="hint" style="margin-top:10px">Нажмите на любой день, чтобы поставить смену, выходной или поменять время.</p>
+    </section>
+
+    <aside class="sidebar">
+      <section class="card">
+        <h3>Кто работает сегодня</h3>
+        <div class="people-list" id="todayList"></div>
+        <button class="ghost-btn wide" id="btnEditDay">Изменить сегодняшний день</button>
+      </section>
+
+      <section class="card">
+        <h3>Мои ближайшие смены</h3>
+        <div id="upcoming"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h3>Люди</h3>
+          <button class="ghost-btn" id="btnAddPerson">+ Добавить</button>
+        </div>
+        <div class="people-list" id="peopleList"></div>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<!-- день -->
+<div class="modal" id="dayModal" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h3 id="dayTitle">—</h3>
+        <div class="sub" id="daySub"></div>
+      </div>
+      <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+    </div>
+    <div class="sheet-body" id="dayBody"></div>
+  </div>
+</div>
+
+<!-- человек -->
+<div class="modal" id="personModal" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h3 id="personTitle">Сотрудник</h3>
+        <div class="sub">График, цвет и время смены</div>
+      </div>
+      <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+    </div>
+    <div class="sheet-body" id="personBody"></div>
+  </div>
+</div>
+
+<!-- настройки -->
+<div class="modal" id="settingsModal" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div>
+        <h3>Настройки и данные</h3>
+        <div class="sub">Всё хранится только на этом устройстве</div>
+      </div>
+      <button class="icon-btn" data-close aria-label="Закрыть">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="about">
+        Данные сохраняются в памяти браузера на этом телефоне/компьютере. Чтобы перенести графики
+        на другое устройство или не потерять их, сделайте <b>экспорт</b> — получится файл, который
+        открывается через <b>импорт</b>.
+      </div>
+      <div class="divider"></div>
+      <div class="field" id="installBlock">
+        <label>Установка на устройство</label>
+        <button class="primary-btn" id="btnInstall" style="width:100%">Установить приложение</button>
+        <p class="hint" id="installHint">Иконка появится на главном экране, приложение будет открываться без адресной строки и работать без интернета.</p>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>Резервная копия</label>
+        <div class="row2">
+          <button class="ghost-btn" id="btnExport" style="padding:11px 12px">⬇ Экспорт файла</button>
+          <button class="ghost-btn" id="btnImport" style="padding:11px 12px">⬆ Импорт файла</button>
+        </div>
+        <input type="file" id="fileInput" accept="application/json,.json" hidden>
+        <p class="hint">Экспорт удобно отправить себе в Telegram/на почту, а на новом устройстве — импортировать.</p>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
+        <label>Опасная зона</label>
+        <div class="row2">
+          <button class="danger-btn" id="btnReset" style="flex:1">Удалить все данные</button>
+        </div>
+        <p class="hint">Удалятся все люди, графики и отметки на этом устройстве.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= утилиты ================= */
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const parseYmd = s => { const p = String(s).split("-").map(Number); return new Date(p[0], (p[1] || 1) - 1, p[2] || 1); };
+  const addDays = (s, n) => { const d = parseYmd(s); d.setDate(d.getDate() + n); return ymd(d); };
+  const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
+  const mod = (a, n) => ((a % n) + n) % n;
+  const uid = () => "p" + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const MONTHS = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  const MONTHS_GEN = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+  const WD_SHORT = ["Пн","Вт","Ср","Чт","Пт","Сб","Вс"];
+  const WD_FULL = ["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"];
+  const WD_MIN = ["вс","пн","вт","ср","чт","пт","сб"];
+
+  const COLORS = ["#4f8cff","#ff6b6b","#2ecc71","#f5a623","#b06bff","#00c2c7","#ff8fab","#9ad34f","#ff8a3d","#5ce1e6"];
+
+  /* ================= состояние ================= */
+  const KEY = "grafik.v1";
+
+  function defaultState(){
+    return {
+      v: 1,
+      filter: "all",
+      people: [{
+        id: uid(),
+        name: "Я",
+        color: COLORS[0],
+        isMe: true,
+        mode: "cycle",
+        cycle: {
+          start: ymd(new Date()), pattern: "ДДВВ",
+          timeStart: "09:00", timeEnd: "21:00",
+          nightStart: "20:00", nightEnd: "08:00"
+        },
+        week: {
+          days: [1, 2, 3, 4, 5], nightDays: [],
+          timeStart: "09:00", timeEnd: "18:00",
+          nightStart: "20:00", nightEnd: "08:00"
+        },
+        overrides: {}
+      }]
+    };
+  }
+
+  let state;
+  try {
+    const raw = localStorage.getItem(KEY);
+    state = raw ? normalizeState(JSON.parse(raw)) : defaultState();
+  } catch (e) { state = defaultState(); }
+
+  function normalizeState(s){
+    if (!s || typeof s !== "object") return defaultState();
+    const out = { v: 1, filter: s.filter === "me" ? "me" : "all", people: [] };
+    if (Array.isArray(s.people)) {
+      out.people = s.people.filter(p => p && typeof p === "object").map(p => ({
+        id: p.id || uid(),
+        name: String(p.name || "Без имени").slice(0, 40),
+        color: typeof p.color === "string" && /^#[0-9a-f]{6}$/i.test(p.color) ? p.color : COLORS[0],
+        isMe: !!p.isMe,
+        mode: ["cycle", "week", "manual"].includes(p.mode) ? p.mode : "cycle",
+        cycle: {
+          start: /^\d{4}-\d{2}-\d{2}$/.test(p.cycle && p.cycle.start) ? p.cycle.start : ymd(new Date()),
+          pattern: normPattern(p.cycle && p.cycle.pattern) || "ДДВВ",
+          timeStart: validTime(p.cycle && p.cycle.timeStart, "09:00"),
+          timeEnd: validTime(p.cycle && p.cycle.timeEnd, "21:00"),
+          nightStart: validTime(p.cycle && p.cycle.nightStart, "20:00"),
+          nightEnd: validTime(p.cycle && p.cycle.nightEnd, "08:00")
+        },
+        week: {
+          days: Array.isArray(p.week && p.week.days) ? p.week.days.filter(d => d >= 0 && d <= 6) : [1,2,3,4,5],
+          nightDays: Array.isArray(p.week && p.week.nightDays)
+            ? p.week.nightDays.filter(d => d >= 0 && d <= 6 && !(p.week.days || []).includes(d))
+            : [],
+          timeStart: validTime(p.week && p.week.timeStart, "09:00"),
+          timeEnd: validTime(p.week && p.week.timeEnd, "18:00"),
+          nightStart: validTime(p.week && p.week.nightStart, "20:00"),
+          nightEnd: validTime(p.week && p.week.nightEnd, "08:00")
+        },
+        overrides: normalizeOverrides(p.overrides)
+      }));
+    }
+    if (!out.people.length) out.people = defaultState().people;
+    if (!out.people.some(p => p.isMe)) out.people[0].isMe = true;
+    return out;
+  }
+
+  function normalizeOverrides(o){
+    const res = {};
+    if (o && typeof o === "object") {
+      Object.keys(o).forEach(k => {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) return;
+        const v = o[k] || {};
+        res[k] = {
+          type: v.type === "off" ? "off" : "work",
+          timeStart: validTime(v.timeStart, ""),
+          timeEnd: validTime(v.timeEnd, "")
+        };
+      });
+    }
+    return res;
+  }
+
+  function validTime(v, def){
+    return (typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v)) ? v : def;
+  }
+
+  function save(){
+    try { localStorage.setItem(KEY, JSON.stringify(state)); }
+    catch (e) { toast("Не удалось сохранить данные"); }
+  }
+
+  function toast(msg){
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  /* ================= график ================= */
+  function normPattern(str){
+    if (!str) return "";
+    let s = String(str).trim().toUpperCase().replace(/\s+/g, "");
+    const ratio = s.match(/^(\d{1,2})[\/\\-](\d{1,2})$/);
+    if (ratio) {
+      const w = Math.min(30, Number(ratio[1])), o = Math.min(30, Number(ratio[2]));
+      if (w + o === 0) return "";
+      return "Д".repeat(w) + "В".repeat(o);
+    }
+    s = s.replace(/WORK|РАБОТА|РАБ|W/g, "Д").replace(/OFF|ВЫХОДНОЙ|ВЫХ|O/g, "В").replace(/Р/g, "Д");
+    // "2д2н2в" -> "ДДННВВ"
+    if (/^(\d+[ДНВ])+$/.test(s)) {
+      s = s.replace(/(\d+)([ДНВ])/g, (m, n, ch) => ch.repeat(Math.max(1, Math.min(30, Number(n)))));
+    }
+    s = s.replace(/[^ДНВ]/g, "");
+    return s.slice(0, 60);
+  }
+
+  function patternCounts(pattern){
+    const s = String(pattern || "");
+    return {
+      d: (s.match(/Д/g) || []).length,
+      n: (s.match(/Н/g) || []).length,
+      v: (s.match(/В/g) || []).length
+    };
+  }
+
+  function weekdayList(arr){
+    return (arr || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7)).map(d => WD_SHORT[(d + 6) % 7]).join(" ");
+  }
+
+  function patternInfo(p){
+    if (p.mode === "cycle") {
+      const c = patternCounts(p.cycle.pattern);
+      const label = (c.n
+        ? "цикл " + c.d + "д · " + c.n + "н · " + c.v + "в"
+        : "цикл " + ratioLabel(p.cycle.pattern)) + " · с " + shortDate(p.cycle.start);
+      const text = c.n
+        ? "ночь " + p.cycle.nightStart + "–" + p.cycle.nightEnd
+        : patternPlain(p.cycle.pattern);
+      return { label: label, text: text };
+    }
+    if (p.mode === "week") {
+      const nights = weekdayList(p.week.nightDays);
+      return {
+        label: "по дням недели",
+        text: (weekdayList(p.week.days) || "нет дней") + (nights ? " · ночи: " + nights : "")
+      };
+    }
+    return { label: "вручную", text: "отмечайте дни в календаре" };
+  }
+
+  function ratioLabel(pattern){
+    // "ДДВВ" -> "2/2"
+    const m = String(pattern).match(/^([ДР]+)(В+)$/);
+    if (m) return m[1].length + "/" + m[2].length;
+    return String(pattern).replace(/[ДР]/g, "Р");
+  }
+
+  function patternPlain(pattern){
+    const c = patternCounts(pattern);
+    if (c.n) return c.d + " дн · " + c.n + " ноч · " + c.v + " вых";
+    if (c.v) return c.d + " раб. / " + c.v + " вых.";
+    return c.d + " раб.";
+  }
+
+  function shortDate(s){
+    const d = parseYmd(s);
+    return pad(d.getDate()) + "." + pad(d.getMonth() + 1) + "." + String(d.getFullYear()).slice(2);
+  }
+
+  function fullDate(s){
+    const d = parseYmd(s);
+    return WD_FULL[d.getDay()] + ", " + d.getDate() + " " + MONTHS_GEN[d.getMonth()] + " " + d.getFullYear();
+  }
+
+  /** Статус человека в конкретный день */
+  function dayStatus(p, dateStr){
+    const ov = p.overrides[dateStr];
+    const base = p.mode === "week" ? p.week : p.cycle;
+    if (ov) {
+      const work = ov.type === "work";
+      const start = ov.timeStart || base.timeStart;
+      const end = ov.timeEnd || base.timeEnd;
+      return {
+        work: work,
+        start: start,
+        end: end,
+        shift: work ? (shiftMeta({ start: start, end: end }).overnight ? "night" : "day") : "off",
+        override: true
+      };
+    }
+    if (p.mode === "cycle") {
+      const len = p.cycle.pattern.length || 1;
+      const idx = mod(daysBetween(p.cycle.start, dateStr), len);
+      const ch = p.cycle.pattern[idx] === "Р" ? "Д" : p.cycle.pattern[idx];
+      if (ch === "Н") return { work: true, start: p.cycle.nightStart, end: p.cycle.nightEnd, shift: "night", override: false };
+      if (ch === "Д") return { work: true, start: p.cycle.timeStart, end: p.cycle.timeEnd, shift: "day", override: false };
+      return { work: false, start: "", end: "", shift: "off", override: false };
+    }
+    if (p.mode === "week") {
+      const wd = parseYmd(dateStr).getDay();
+      if ((p.week.nightDays || []).includes(wd)) {
+        return { work: true, start: p.week.nightStart, end: p.week.nightEnd, shift: "night", override: false };
+      }
+      if (p.week.days.includes(wd)) {
+        return { work: true, start: p.week.timeStart, end: p.week.timeEnd, shift: "day", override: false };
+      }
+      return { work: false, start: "", end: "", shift: "off", override: false };
+    }
+    return { work: false, start: "", end: "", shift: "off", override: false };
+  }
+
+  function toMinutes(t){
+    if (!t || !/^\d{2}:\d{2}$/.test(t)) return null;
+    const p = t.split(":").map(Number);
+    return p[0] * 60 + p[1];
+  }
+
+  /** Ночная смена — та, у которой конец раньше начала: она переходит через полночь. */
+  function shiftMeta(st){
+    const a = toMinutes(st.start), b = toMinutes(st.end);
+    if (a === null || b === null) return { overnight: false, minutes: 0, duration: "" };
+    const overnight = b <= a;
+    const minutes = overnight ? (b + 1440 - a) : (b - a);
+    let duration = "";
+    if (minutes > 0) {
+      const h = Math.floor(minutes / 60), m = minutes % 60;
+      duration = h ? (h + " ч" + (m ? " " + m + " мин" : "")) : (m + " мин");
+    }
+    return { overnight: overnight, minutes: minutes, duration: duration };
+  }
+
+  function shiftText(st){
+    if (!st.start || !st.end) return "";
+    return st.start + "–" + st.end;
+  }
+
+  function shiftFull(st){
+    if (!st.start || !st.end) return "";
+    return shiftText(st) + (shiftMeta(st).overnight ? " +1" : "");
+  }
+
+  /* ================= отрисовка ================= */
+  let viewYear, viewMonth;
+  (function initView(){
+    const n = new Date();
+    viewYear = n.getFullYear();
+    viewMonth = n.getMonth();
+  })();
+
+  function visiblePeople(){
+    if (state.filter === "me") return state.people.filter(p => p.isMe).slice(0, 1);
+    return state.people;
+  }
+
+  function renderAll(){
+    renderTodayLine();
+    renderCalendar();
+    renderSidebar();
+    save();
+  }
+
+  function renderTodayLine(){
+    const today = ymd(new Date());
+    const d = parseYmd(today);
+    const working = state.people.filter(p => dayStatus(p, today).work);
+    let s = "Сегодня " + WD_MIN[d.getDay()] + ", " + d.getDate() + " " + MONTHS_GEN[d.getMonth()] + " · ";
+    if (!working.length) s += "никто не работает";
+    else s += "работают: " + working.map(p => p.name + " (" + shiftFull(dayStatus(p, today)) + ")").join(", ");
+    $("#todayLine").innerHTML = esc(s);
+  }
+
+  function renderCalendar(){
+    $("#monthTitle").textContent = MONTHS[viewMonth] + " " + viewYear;
+
+    const wd = $("#weekdays");
+    if (!wd.children.length) wd.innerHTML = WD_SHORT.map(x => "<span>" + x + "</span>").join("");
+
+    const first = new Date(viewYear, viewMonth, 1);
+    const startOffset = (first.getDay() + 6) % 7; // Пн = 0
+    const gridStart = new Date(viewYear, viewMonth, 1 - startOffset);
+
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+    const today = ymd(new Date());
+    const visible = visiblePeople();
+    const grid = $("#grid");
+    const frag = document.createDocumentFragment();
+
+    for (let i = 0; i < totalCells; i++) {
+      const d = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+      const ds = ymd(d);
+      const inMonth = d.getMonth() === viewMonth;
+      const wdIndex = d.getDay();
+      const isWeekend = wdIndex === 0 || wdIndex === 6;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cell" + (inMonth ? "" : " out") + (isWeekend ? " weekend" : "") + (ds === today ? " today" : "");
+      btn.dataset.date = ds;
+      btn.setAttribute("aria-label", fullDate(ds));
+
+      const num = document.createElement("span");
+      num.className = "dnum";
+      num.textContent = d.getDate();
+      btn.appendChild(num);
+
+      const chips = document.createElement("span");
+      chips.className = "chips";
+      const workers = visible.filter(p => dayStatus(p, ds).work);
+      const hasNight = workers.some(p => dayStatus(p, ds).shift === "night");
+      if (hasNight) btn.classList.add("night");
+      const shown = workers.slice(0, 3);
+      shown.forEach(p => {
+        const st = dayStatus(p, ds);
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.style.setProperty("--c", p.color);
+        chip.title = p.name + (shiftFull(st) ? " · " + shiftFull(st) : "");
+        chip.innerHTML = "<i></i><b>" + esc(p.name) + "</b>" + (st.shift === "night" ? '<em class="moon" title="ночная смена">☾</em>' : "");
+        chips.appendChild(chip);
+      });
+      if (workers.length > shown.length) {
+        const more = document.createElement("span");
+        more.className = "chip more";
+        more.dataset.n = "+" + (workers.length - shown.length);
+        more.textContent = "+" + (workers.length - shown.length);
+        chips.appendChild(more);
+      }
+      btn.appendChild(chips);
+      frag.appendChild(btn);
+    }
+
+    grid.innerHTML = "";
+    grid.appendChild(frag);
+
+    const legend = $("#legend");
+    if (state.filter === "me") {
+      legend.innerHTML = '<span>Показан только ваш график</span>';
+    } else {
+      legend.innerHTML = state.people.map(p =>
+        '<span style="--c:' + p.color + '"><i></i>' + esc(p.name) + (p.isMe ? " · это я" : "") + "</span>"
+      ).join("") || '<span>Добавьте хотя бы одного человека</span>';
+    }
+  }
+
+  function personRow(p, sub, tag){
+    return '<div class="person">' +
+      '<span class="dot" style="--c:' + p.color + '"></span>' +
+      '<span class="info"><span class="nm">' + esc(p.name) + (p.isMe ? '<span class="me">я</span>' : "") + '</span>' +
+      '<span class="sub">' + esc(sub) + "</span></span>" +
+      '<button class="edit" data-edit-person="' + p.id + '" aria-label="Изменить">✎</button>' +
+      "</div>";
+  }
+
+  function renderSidebar(){
+    const today = ymd(new Date());
+    const tl = $("#todayList");
+    const working = state.people.filter(p => dayStatus(p, today).work);
+    if (!working.length) {
+      tl.innerHTML = '<div class="empty">Сегодня по графикам никто не работает. Хороший день 🌿</div>';
+    } else {
+      tl.innerHTML = working.map(p => {
+        const st = dayStatus(p, today);
+        return personRow(p, shiftFull(st) || "смена");
+      }).join("");
+    }
+
+    const pl = $("#peopleList");
+    pl.innerHTML = state.people.map(p => {
+      const inf = patternInfo(p);
+      return personRow(p, inf.label + (inf.text ? " · " + inf.text : ""));
+    }).join("");
+
+    const up = $("#upcoming");
+    const me = state.people.find(p => p.isMe);
+    if (!me) {
+      up.innerHTML = '<div class="empty">Отметьте себя в списке людей — и здесь появятся ваши смены.</div>';
+    } else {
+      const list = [];
+      for (let i = 0; i < 200 && list.length < 5; i++) {
+        const ds = addDays(today, i);
+        const st = dayStatus(me, ds);
+        if (st.work) list.push({ ds, st });
+      }
+      if (!list.length) {
+        up.innerHTML = '<div class="empty">Ближайшие 200 дней без смен. Проверьте настройки графика.</div>';
+      } else {
+        up.innerHTML = '<div class="upcoming">' + list.map(x => {
+          const d = parseYmd(x.ds);
+          const isToday = x.ds === today;
+          const when = isToday ? "Сегодня" : (x.ds === addDays(today, 1) ? "Завтра" : WD_MIN[d.getDay()] + ", " + d.getDate() + " " + MONTHS_GEN[d.getMonth()]);
+          return '<div class="up' + (isToday ? " today" : "") + '">' +
+            '<span class="when">' + esc(when) + '</span>' +
+            '<span class="what">' + esc(shiftFull(x.st) || "смена") + '</span></div>';
+        }).join("") + "</div>";
+      }
+    }
+  }
+
+  /* ================= день ================= */
+  function openDay(dateStr){
+    const body = $("#dayBody");
+    $("#dayModal").dataset.date = dateStr;
+    const d = parseYmd(dateStr);
+    $("#dayTitle").textContent = d.getDate() + " " + MONTHS_GEN[d.getMonth()] + " " + d.getFullYear();
+    $("#daySub").textContent = WD_FULL[d.getDay()] + (dateStr === ymd(new Date()) ? " · сегодня" : "");
+
+    body.innerHTML = state.people.map(p => {
+      const st = dayStatus(p, dateStr);
+      const timeText = st.work ? shiftText(st) : "";
+      const meta = shiftMeta(st);
+      const nightBadge = (st.work && st.shift === "night")
+        ? ' <span class="night-badge">☾ ночь · ' + meta.duration + "</span>" : "";
+      return '<div class="day-row" data-person="' + p.id + '">' +
+        '<span class="who"><span class="dot" style="--c:' + p.color + '"></span>' +
+        '<span class="nm">' + esc(p.name) + (p.isMe ? ' <span class="me" style="font-size:10px;color:#7ab0ff">я</span>' : "") + "</span></span>" +
+        '<span class="status' + (st.work ? " work" : "") + '">' + (st.work ? "Смена" : "Выходной") + nightBadge + "</span>" +
+        '<div class="row-actions">' +
+        '<button class="minibtn' + (st.work ? " on" : "") + '" data-set-work="' + p.id + '">Работает</button>' +
+        '<button class="minibtn' + (!st.work ? " on off" : "") + '" data-set-off="' + p.id + '">Выходной</button>' +
+        '<button class="minibtn" data-flip="' + p.id + '">' +
+        (st.work && st.shift === "night" ? "☀ день" : "☾ ночь") + "</button>" +
+        (st.override ? '<button class="minibtn link" data-reset="' + p.id + '">вернуть по графику</button>' : "") +
+        "</div>" +
+        (st.work && timeText ? '<div class="time-row"><span class="tl">Время</span>' +
+          '<input class="time-in" type="time" value="' + (st.start || "") + '" data-time="start" data-pid="' + p.id + '" aria-label="Начало смены">' +
+          '<span style="color:#6b7c99">–</span>' +
+          '<input class="time-in" type="time" value="' + (st.end || "") + '" data-time="end" data-pid="' + p.id + '" aria-label="Конец смены">' +
+          "</div>" : "") +
+        "</div>";
+    }).join("") || '<div class="empty">Список людей пуст.</div>';
+
+    body.insertAdjacentHTML("beforeend",
+      '<p class="hint" style="margin-top:12px">Кнопки «Работает» / «Выходной» ставят отметку только на этот день — это не меняет общий график.' +
+      "<br>Кнопка «☾ ночь» делает смену ночной, «☀ день» — обратно (время берётся из настроек человека).</p>");
+
+    openModal("#dayModal");
+  }
+
+  function setOverride(pid, type, dateStr){
+    const p = state.people.find(x => x.id === pid);
+    if (!p) return;
+    const st = dayStatus(p, dateStr);
+    const base = p.mode === "week" ? p.week : p.cycle;
+    if (type === "clear") {
+      delete p.overrides[dateStr];
+    } else if (type === "work") {
+      p.overrides[dateStr] = { type: "work", timeStart: st.start || base.timeStart, timeEnd: st.end || base.timeEnd };
+    } else {
+      p.overrides[dateStr] = { type: "off", timeStart: "", timeEnd: "" };
+    }
+    renderAll();
+  }
+
+  /* ================= редактор человека ================= */
+  let draft = null;
+  let draftId = null;
+
+  function openPerson(id){
+    const src = id ? state.people.find(p => p.id === id) : null;
+    const n = new Date();
+    draft = src ? JSON.parse(JSON.stringify(src)) : {
+      id: uid(),
+      name: "",
+      color: COLORS[state.people.length % COLORS.length],
+      isMe: !state.people.some(p => p.isMe),
+      mode: "cycle",
+      cycle: {
+        start: ymd(n), pattern: "ДДВВ",
+        timeStart: "09:00", timeEnd: "21:00",
+        nightStart: "20:00", nightEnd: "08:00"
+      },
+      week: {
+        days: [1, 2, 3, 4, 5], nightDays: [],
+        timeStart: "09:00", timeEnd: "18:00",
+        nightStart: "20:00", nightEnd: "08:00"
+      },
+      overrides: {}
+    };
+    draftId = src ? src.id : null;
+    $("#personTitle").textContent = src ? "Изменить: " + src.name : "Новый человек";
+    renderPersonForm();
+    openModal("#personModal");
+  }
+
+  function renderPersonForm(){
+    const d = draft;
+    const body = $("#personBody");
+    const modeBtn = (m, label) => '<button type="button" class="' + (d.mode === m ? "on" : "") + '" data-mode="' + m + '">' + label + "</button>";
+
+    let modeFields = "";
+    if (d.mode === "cycle") {
+      modeFields =
+        '<div class="field"><label>Начало цикла</label>' +
+        '<input class="inp" type="date" id="pStart" value="' + d.cycle.start + '">' +
+        '<p class="hint">Первый день рисунка смен. От него считается весь цикл.</p></div>' +
+        '<div class="field"><label>Рисунок смен</label>' +
+        '<input class="inp" type="text" id="pPattern" value="' + esc(d.cycle.pattern) + '" placeholder="2/2, ДДННВВ или 2д2н2в" autocomplete="off">' +
+        '<div class="presets" id="presets">' +
+        [["2/2", "2/2"], ["3/3", "3/3"], ["4/4", "4/4"], ["5/2", "5/2"], ["1/3", "1/3"], ["2д2н2в", "2д + 2н + 2в"], ["2н2в", "2н + 2в"]]
+          .map(x => '<button type="button" data-preset="' + x[0] + '">' + x[1] + "</button>").join("") +
+        "</div>" +
+        '<div class="cycle-editor" id="cycleEditor"></div>' +
+        '<p class="hint">Нажимайте на квадратики: выходной → <b>день</b> → <b>ночь</b>.<br>' +
+        "Буквами: <code>Д</code> — день, <code>Н</code> — ночь, <code>В</code> — выходной. Например, <code>2д2н2в</code>.</p>" +
+        '<div class="preview" id="patternPreview"></div></div>';
+    } else if (d.mode === "week") {
+      modeFields =
+        '<div class="field"><label>Дни недели</label><div class="wdays" id="wdays">' +
+        WD_SHORT.map((w, i) => {
+          const idx = (i + 1) % 7;
+          const cls = d.week.nightDays.includes(idx) ? "night" : d.week.days.includes(idx) ? "on" : "";
+          return '<button type="button" class="' + cls + '" data-wday="' + idx + '">' + w + "</button>";
+        }).join("") +
+        "</div>" +
+        '<p class="hint">Нажимайте на день: выходной → <b>день</b> → <b>ночь</b>. Синий — дневная смена, фиолетовый — ночная.</p></div>';
+    } else {
+      modeFields = '<p class="hint" style="margin-bottom:14px">График не задаётся — отмечайте рабочие дни вручную, нажимая на день в календаре.</p>';
+    }
+
+    const curTimes = d.mode === "week" ? d.week : d.cycle;
+    const times = d.mode === "manual" ? "" :
+      '<div class="field"><label>☀ Дневная смена</label><div class="row2">' +
+      '<input class="inp" type="time" id="pDayStart" value="' + curTimes.timeStart + '">' +
+      '<input class="inp" type="time" id="pDayEnd" value="' + curTimes.timeEnd + '">' +
+      "</div>" +
+      '<div class="presets" id="dayPresets" style="margin-top:8px">' +
+      '<button type="button" data-dt="08:00|20:00">08–20</button>' +
+      '<button type="button" data-dt="09:00|18:00">09–18</button>' +
+      '<button type="button" data-dt="09:00|21:00">09–21</button>' +
+      "</div></div>" +
+      '<div class="field"><label>☾ Ночная смена</label><div class="row2">' +
+      '<input class="inp" type="time" id="pNightStart" value="' + curTimes.nightStart + '">' +
+      '<input class="inp" type="time" id="pNightEnd" value="' + curTimes.nightEnd + '">' +
+      "</div>" +
+      '<div class="presets" id="nightPresets" style="margin-top:8px">' +
+      '<button type="button" data-nt="20:00|08:00">20–08</button>' +
+      '<button type="button" data-nt="22:00|06:00">22–06</button>' +
+      '<button type="button" data-nt="00:00|12:00">00–12</button>' +
+      "</div>" +
+      '<p class="hint">Ночная смена переходит через полночь: в календаре такие дни помечены «☾», а в списках время идёт с «+1».</p></div>';
+
+    body.innerHTML =
+      '<div class="field"><label>Имя</label>' +
+      '<input class="inp" type="text" id="pName" maxlength="40" placeholder="Например: Аня" value="' + esc(d.name) + '"></div>' +
+      '<div class="field"><label>Цвет</label><div class="swatches" id="swatches">' +
+      COLORS.map(c => '<button type="button" class="sw' + (d.color.toLowerCase() === c.toLowerCase() ? " on" : "") + '" style="--c:' + c + '" data-color="' + c + '" aria-label="' + c + '"></button>').join("") +
+      "</div></div>" +
+      '<div class="field"><label class="check"><input type="checkbox" id="pIsMe"' + (d.isMe ? " checked" : "") + "> Это я</label></div>" +
+      '<div class="field"><label>Как задаётся график</label><div class="seg" id="modeSeg">' +
+      modeBtn("cycle", "Цикл смен") + modeBtn("week", "Дни недели") + modeBtn("manual", "Вручную") +
+      "</div></div>" + modeFields + times +
+      '<div class="sheet-actions">' +
+      (draftId ? '<button class="danger-btn" type="button" id="pDelete">Удалить</button>' : "") +
+      '<button class="primary-btn" type="button" id="pSave">Сохранить</button></div>' +
+      '<p class="hint" style="margin-top:10px">Отметки отдельных дней («Работает»/«Выходной» в календаре) сохраняются и не сбрасываются при изменении графика.</p>';
+
+    // события
+    $("#pName", body).addEventListener("input", e => { draft.name = e.target.value; });
+    $("#pIsMe", body).addEventListener("change", e => { draft.isMe = e.target.checked; });
+    $$("#swatches .sw", body).forEach(b => b.addEventListener("click", () => { draft.color = b.dataset.color; renderPersonForm(); }));
+    $$("#modeSeg button", body).forEach(b => b.addEventListener("click", () => {
+      if (draft.mode === b.dataset.mode) return;
+      const cur = draft.mode === "week" ? draft.week : draft.cycle;
+      const t = { s: cur.timeStart, e: cur.timeEnd, ns: cur.nightStart, ne: cur.nightEnd };
+      draft.mode = b.dataset.mode;
+      if (draft.mode === "week" || draft.mode === "cycle") {
+        const dst = draft.mode === "week" ? draft.week : draft.cycle;
+        dst.timeStart = t.s; dst.timeEnd = t.e;
+        dst.nightStart = t.ns; dst.nightEnd = t.ne;
+      }
+      renderPersonForm();
+    }));
+
+    const startEl = $("#pStart", body);
+    if (startEl) startEl.addEventListener("input", e => { draft.cycle.start = e.target.value || ymd(new Date()); renderPatternPreview(); });
+    const patEl = $("#pPattern", body);
+
+    function renderCycleEditor(){
+      const box = $("#cycleEditor", body);
+      if (!box) return;
+      box.innerHTML = String(draft.cycle.pattern || "В").split("").map((ch, i) => {
+        const c = ch === "Н" ? "n" : ch === "Д" ? "d" : "v";
+        const title = ch === "Н" ? "ночная смена" : ch === "Д" ? "дневная смена" : "выходной";
+        return '<button type="button" class="' + c + '" data-ci="' + i + '" title="' + title + '">' + ch + "</button>";
+      }).join("");
+    }
+
+    if (patEl) patEl.addEventListener("input", e => {
+      draft.cycle.pattern = normPattern(e.target.value) || "В";
+      renderCycleEditor();
+      renderPatternPreview();
+    });
+
+    const ce = $("#cycleEditor", body);
+    if (ce) {
+      renderCycleEditor();
+      ce.addEventListener("click", e => {
+        const b = e.target.closest("button[data-ci]");
+        if (!b) return;
+        const i = Number(b.dataset.ci);
+        const chars = String(draft.cycle.pattern || "В").split("");
+        const cur = chars[i] === "Р" ? "Д" : (chars[i] || "В");
+        chars[i] = cur === "В" ? "Д" : cur === "Д" ? "Н" : "В";
+        draft.cycle.pattern = chars.join("");
+        if (patEl) patEl.value = draft.cycle.pattern;
+        renderCycleEditor();
+        renderPatternPreview();
+      });
+    }
+
+    $$("#presets button", body).forEach(b => b.addEventListener("click", () => {
+      const raw = b.dataset.preset;
+      const n = normPattern(raw) || "ДДВВ";
+      draft.cycle.pattern = n;
+      if (raw === "5/2") {
+        const t = new Date();
+        const off = (t.getDay() + 6) % 7;
+        const mon = new Date(t.getFullYear(), t.getMonth(), t.getDate() - off);
+        draft.cycle.start = ymd(mon);
+        if (startEl) startEl.value = draft.cycle.start;
+      }
+      if (patEl) patEl.value = n;
+      renderCycleEditor();
+      renderPatternPreview();
+    }));
+
+    $$("#wdays button", body).forEach(b => b.addEventListener("click", () => {
+      const idx = Number(b.dataset.wday);
+      const inDay = draft.week.days.indexOf(idx);
+      const inNight = draft.week.nightDays.indexOf(idx);
+      if (inNight >= 0) {
+        draft.week.nightDays.splice(inNight, 1);
+      } else if (inDay >= 0) {
+        draft.week.days.splice(inDay, 1);
+        draft.week.nightDays.push(idx);
+      } else {
+        draft.week.days.push(idx);
+      }
+      renderPersonForm();
+    }));
+
+    [["#pDayStart", "timeStart"], ["#pDayEnd", "timeEnd"], ["#pNightStart", "nightStart"], ["#pNightEnd", "nightEnd"]]
+      .forEach(pair => {
+        const el = $(pair[0], body);
+        if (!el) return;
+        el.addEventListener("input", e => {
+          const target = draft.mode === "week" ? draft.week : draft.cycle;
+          target[pair[1]] = e.target.value;
+          renderPatternPreview();
+        });
+      });
+
+    $$("#dayPresets button", body).forEach(b => b.addEventListener("click", () => {
+      const p = b.dataset.dt.split("|");
+      const target = draft.mode === "week" ? draft.week : draft.cycle;
+      target.timeStart = p[0];
+      target.timeEnd = p[1];
+      renderPersonForm();
+    }));
+    $$("#nightPresets button", body).forEach(b => b.addEventListener("click", () => {
+      const p = b.dataset.nt.split("|");
+      const target = draft.mode === "week" ? draft.week : draft.cycle;
+      target.nightStart = p[0];
+      target.nightEnd = p[1];
+      renderPersonForm();
+    }));
+
+    $("#pSave", body).addEventListener("click", savePerson);
+    const del = $("#pDelete", body);
+    if (del) del.addEventListener("click", deletePerson);
+
+    renderPatternPreview();
+  }
+
+  function renderPatternPreview(){
+    const box = $("#patternPreview");
+    if (!box) return;
+    const d = draft;
+    const today = ymd(new Date());
+    let html = "";
+    for (let i = 0; i < 14; i++) {
+      const ds = addDays(today, i);
+      const st = dayStatus(d, ds);
+      const dd = parseYmd(ds);
+      const night = st.shift === "night";
+      const letter = night ? "Н" : st.shift === "day" ? "Д" : "В";
+      html += '<span class="pv' + (st.work ? " work" : "") + (night ? " night" : "") + '"' +
+        (st.work ? ' title="' + (night ? "ночная смена " : "дневная смена ") + shiftFull(st) + '"' : "") + ">" +
+        '<span class="d">' + WD_MIN[dd.getDay()] + " " + dd.getDate() + '</span>' +
+        '<span class="s">' + letter + "</span></span>";
+    }
+    box.innerHTML = html;
+  }
+
+  function savePerson(){
+    const name = (draft.name || "").trim();
+    if (!name) { toast("Введите имя"); $("#pName").focus(); return; }
+    draft.name = name;
+    draft.cycle.pattern = normPattern(draft.cycle.pattern) || "ДДВВ";
+    if (draft.isMe) state.people.forEach(p => { if (p.id !== draft.id) p.isMe = false; });
+
+    const idx = state.people.findIndex(p => p.id === draft.id);
+    if (idx >= 0) state.people[idx] = JSON.parse(JSON.stringify(draft));
+    else state.people.push(JSON.parse(JSON.stringify(draft)));
+
+    if (!state.people.some(p => p.isMe)) state.people[0].isMe = true;
+
+    closeModal("#personModal");
+    renderAll();
+    toast(idx >= 0 ? "Сохранено" : "Добавлено: " + name);
+  }
+
+  function deletePerson(){
+    if (!confirm("Удалить «" + draft.name + "» вместе с его отметками?")) return;
+    state.people = state.people.filter(p => p.id !== draft.id);
+    if (!state.people.length) state.people = defaultState().people;
+    if (!state.people.some(p => p.isMe)) state.people[0].isMe = true;
+    closeModal("#personModal");
+    renderAll();
+    toast("Удалено");
+  }
+
+  /* ================= модалки ================= */
+  function openModal(sel){
+    const m = $(sel);
+    m.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function closeModal(sel){
+    const m = $(sel);
+    m.hidden = true;
+    if ($$(".modal:not([hidden])").length === 0) document.body.style.overflow = "";
+  }
+
+  /* ================= экспорт / импорт ================= */
+  function exportData(){
+    try {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "grafik-" + ymd(new Date()) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      toast("Файл сохранён");
+    } catch (e) { toast("Браузер не дал сохранить файл"); }
+  }
+
+  function importData(file){
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const parsed = JSON.parse(String(fr.result));
+        if (!parsed || !Array.isArray(parsed.people)) throw new Error("bad");
+        state = normalizeState(parsed);
+        renderAll();
+        toast("Данные загружены");
+        closeModal("#settingsModal");
+      } catch (e) { toast("Не получилось прочитать файл"); }
+    };
+    fr.onerror = () => toast("Не получилось прочитать файл");
+    fr.readAsText(file);
+  }
+
+  /* ================= события ================= */
+  $("#prevMonth").addEventListener("click", () => {
+    viewMonth--; if (viewMonth < 0) { viewMonth = 11; viewYear--; }
+    renderCalendar();
+  });
+  $("#nextMonth").addEventListener("click", () => {
+    viewMonth++; if (viewMonth > 11) { viewMonth = 0; viewYear++; }
+    renderCalendar();
+  });
+  $("#btnToday").addEventListener("click", () => {
+    const n = new Date(); viewYear = n.getFullYear(); viewMonth = n.getMonth();
+    renderCalendar();
+  });
+
+  $$("#filterSeg button").forEach(b => b.addEventListener("click", () => {
+    state.filter = b.dataset.filter;
+    $$("#filterSeg button").forEach(x => x.classList.toggle("on", x === b));
+    renderAll();
+  }));
+
+  $("#grid").addEventListener("click", e => {
+    const cell = e.target.closest(".cell");
+    if (cell) openDay(cell.dataset.date);
+  });
+
+  $("#dayBody").addEventListener("click", e => {
+    const dateStr = currentDayDate();
+    if (!dateStr) return;
+    const w = e.target.closest("[data-set-work]");
+    if (w) { setOverride(w.dataset.setWork, "work", dateStr); openDay(dateStr); return; }
+    const o = e.target.closest("[data-set-off]");
+    if (o) { setOverride(o.dataset.setOff, "off", dateStr); openDay(dateStr); return; }
+    const r = e.target.closest("[data-reset]");
+    if (r) { setOverride(r.dataset.reset, "clear", dateStr); openDay(dateStr); return; }
+    const fl = e.target.closest("[data-flip]");
+    if (fl) {
+      const p = state.people.find(x => x.id === fl.dataset.flip);
+      if (p) {
+        const st = dayStatus(p, dateStr);
+        const base = p.mode === "week" ? p.week : p.cycle;
+        const toNight = !(st.work && st.shift === "night");
+        p.overrides[dateStr] = {
+          type: "work",
+          timeStart: toNight ? base.nightStart : base.timeStart,
+          timeEnd: toNight ? base.nightEnd : base.timeEnd
+        };
+        renderAll();
+        openDay(dateStr);
+      }
+      return;
+    }
+  });
+
+  $("#dayBody").addEventListener("change", e => {
+    const inp = e.target.closest(".time-in");
+    if (!inp) return;
+    const dateStr = currentDayDate();
+    const pid = inp.dataset.pid;
+    const p = state.people.find(x => x.id === pid);
+    if (!p || !dateStr) return;
+    const st = dayStatus(p, dateStr);
+    const next = {
+      type: "work",
+      timeStart: inp.dataset.time === "start" ? inp.value : (st.start || ""),
+      timeEnd: inp.dataset.time === "end" ? inp.value : (st.end || "")
+    };
+    p.overrides[dateStr] = next;
+    renderAll();
+    openDay(dateStr);
+  });
+
+  function currentDayDate(){
+    const m = $("#dayModal");
+    if (m.hidden) return null;
+    return m.dataset.date || null;
+  }
+
+  $("#btnEditDay").addEventListener("click", () => openDay(ymd(new Date())));
+  $("#btnAddPerson").addEventListener("click", () => openPerson(null));
+  $("#btnSettings").addEventListener("click", () => openModal("#settingsModal"));
+
+  $("#peopleList").addEventListener("click", e => {
+    const b = e.target.closest("[data-edit-person]");
+    if (b) openPerson(b.dataset.editPerson);
+  });
+  $("#todayList").addEventListener("click", e => {
+    const b = e.target.closest("[data-edit-person]");
+    if (b) openPerson(b.dataset.editPerson);
+  });
+
+  $$(".modal").forEach(m => {
+    m.addEventListener("click", e => {
+      if (e.target === m) closeModal("#" + m.id);
+      const c = e.target.closest("[data-close]");
+      if (c) closeModal("#" + m.id);
+    });
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") $$(".modal:not([hidden])").forEach(m => closeModal("#" + m.id));
+  });
+
+  $("#btnExport").addEventListener("click", exportData);
+  $("#btnImport").addEventListener("click", () => $("#fileInput").click());
+  $("#fileInput").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0];
+    if (f) importData(f);
+    e.target.value = "";
+  });
+  $("#btnReset").addEventListener("click", () => {
+    if (!confirm("Удалить все графики и людей на этом устройстве?")) return;
+    state = defaultState();
+    renderAll();
+    closeModal("#settingsModal");
+    toast("Данные удалены");
+  });
+
+  /* ================= установка как приложение ================= */
+  let deferredPrompt = null;
+  const isStandalone = () =>
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || window.navigator.standalone === true;
+  const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    deferredPrompt = e;
+    setupInstall();
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+    toast("Приложение установлено");
+    setupInstall();
+  });
+
+  function setupInstall(){
+    const btn = $("#btnInstall"), hint = $("#installHint");
+    if (!btn) return;
+    if (document.body.classList.contains("standalone")) {
+      btn.textContent = "Приложение уже установлено";
+      btn.disabled = true;
+      hint.textContent = "Вы открыли приложение с главного экрана. Всё работает без интернета.";
+      return;
+    }
+    btn.disabled = false;
+    if (deferredPrompt) {
+      btn.textContent = "Установить приложение";
+      hint.textContent = "Нажмите кнопку — иконка появится на главном экране телефона или на рабочем столе.";
+    } else if (isIOS()) {
+      btn.textContent = "Как установить на iPhone";
+      hint.textContent = "В Safari нажмите «Поделиться» (квадрат со стрелкой), затем «На экран «Домой»».";
+    } else {
+      btn.textContent = "Как установить";
+      hint.textContent = "Откройте это приложение в Chrome и выберите меню ⋮ → «Установить приложение» (или значок установки в адресной строке).";
+    }
+  }
+
+  $("#btnInstall").addEventListener("click", async () => {
+    if (!deferredPrompt) {
+      setupInstall();
+      $("#installHint").style.color = "#cfe0ff";
+      setTimeout(() => { $("#installHint").style.color = ""; }, 4000);
+      return;
+    }
+    deferredPrompt.prompt();
+    try { await deferredPrompt.userChoice; } catch (e) {}
+    deferredPrompt = null;
+    setupInstall();
+  });
+
+  /* ================= старт ================= */
+  if (isStandalone()) document.body.classList.add("standalone");
+  setupInstall();
+  $$("#filterSeg button").forEach(b => b.classList.toggle("on", b.dataset.filter === state.filter));
+  renderAll();
+
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+
+  // при возврате в приложение обновляем «сегодня»
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      renderTodayLine();
+      renderSidebar();
+    }
+  });
+})();
+</script>
+</body>
+</html>

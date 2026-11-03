@@ -1,0 +1,28 @@
+{
+  "name": "Графики работы",
+  "short_name": "Графики",
+  "description": "Календарь смен: свои графики работы и графики друзей. Работает офлайн.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#0b101a",
+  "theme_color": "#0e1421",
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Сегодня",
+      "short_name": "Сегодня",
+      "url": "./?today=1",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
