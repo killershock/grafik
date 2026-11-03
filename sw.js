@@ -1,6 +1,6 @@
-/* Офлайн-кэш приложения «Графики работы» */
-const CACHE = "grafik-v7";
-const VERSION = "7";
+﻿/* РћС„Р»Р°Р№РЅ-РєСЌС€ РїСЂРёР»РѕР¶РµРЅРёСЏ В«Р“СЂР°С„РёРєРё СЂР°Р±РѕС‚С‹В» */
+const CACHE = "grafik-v8";
+const VERSION = "8";
 const ASSETS = [
   "./",
   "./index.html",
@@ -12,8 +12,8 @@ const ASSETS = [
   "./icons/favicon.svg"
 ];
 
-// Скачиваем каждый файл с уникальным ?v=, чтобы обойти кэш GitHub Pages:
-// иначе после обновления в офлайн-кэш мог попасть старый index.html.
+// РЎРєР°С‡РёРІР°РµРј РєР°Р¶РґС‹Р№ С„Р°Р№Р» СЃ СѓРЅРёРєР°Р»СЊРЅС‹Рј ?v=, С‡С‚РѕР±С‹ РѕР±РѕР№С‚Рё РєСЌС€ GitHub Pages:
+// РёРЅР°С‡Рµ РїРѕСЃР»Рµ РѕР±РЅРѕРІР»РµРЅРёСЏ РІ РѕС„Р»Р°Р№РЅ-РєСЌС€ РјРѕРі РїРѕРїР°СЃС‚СЊ СЃС‚Р°СЂС‹Р№ index.html.
 self.addEventListener("install", event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
@@ -21,7 +21,7 @@ self.addEventListener("install", event => {
       try {
         const res = await fetch(new Request(u + (u.includes("?") ? "&" : "?") + "v=" + VERSION, { cache: "reload" }));
         if (res && res.ok) await cache.put(u, res.clone());
-      } catch (e) { /* файл просто не закэшируется */ }
+      } catch (e) { /* С„Р°Р№Р» РїСЂРѕСЃС‚Рѕ РЅРµ Р·Р°РєСЌС€РёСЂСѓРµС‚СЃСЏ */ }
     }));
     await self.skipWaiting();
   })());
@@ -39,8 +39,8 @@ self.addEventListener("fetch", event => {
   const req = event.request;
   if (req.method !== "GET") return;
 
-  // Страницы: сначала сеть (чтобы подтянуть обновление), иначе кэш.
-  // Неудачные ответы (нет сети, 5xx) тоже считаем поводом отдать кэш.
+  // РЎС‚СЂР°РЅРёС†С‹: СЃРЅР°С‡Р°Р»Р° СЃРµС‚СЊ (С‡С‚РѕР±С‹ РїРѕРґС‚СЏРЅСѓС‚СЊ РѕР±РЅРѕРІР»РµРЅРёРµ), РёРЅР°С‡Рµ РєСЌС€.
+  // РќРµСѓРґР°С‡РЅС‹Рµ РѕС‚РІРµС‚С‹ (РЅРµС‚ СЃРµС‚Рё, 5xx) С‚РѕР¶Рµ СЃС‡РёС‚Р°РµРј РїРѕРІРѕРґРѕРј РѕС‚РґР°С‚СЊ РєСЌС€.
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req).then(res => {
@@ -55,7 +55,7 @@ self.addEventListener("fetch", event => {
     return;
   }
 
-  // Остальное: сначала кэш, потом сеть
+  // РћСЃС‚Р°Р»СЊРЅРѕРµ: СЃРЅР°С‡Р°Р»Р° РєСЌС€, РїРѕС‚РѕРј СЃРµС‚СЊ
   event.respondWith(
     caches.match(req).then(hit => {
       if (hit) return hit;

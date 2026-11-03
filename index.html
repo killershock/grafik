@@ -134,6 +134,13 @@
   }
   .chips{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0;max-width:100%}
   .chip .moon{font-style:normal;font-size:10px;color:#c3d8ff;flex:none;opacity:.9}
+  .chip.vac{
+    background:rgba(255,255,255,.03);
+    border:1px dashed rgba(255,255,255,.28);
+    border-color:color-mix(in srgb, var(--c) 60%, transparent);
+    color:color-mix(in srgb, var(--c) 80%, #ffffff);
+  }
+  .chip .palm{font-style:normal;font-size:9px;line-height:1;flex:none}
   .night-badge{
     font-size:10.5px;font-weight:700;color:#b8d1ff;background:rgba(79,140,255,.14);
     border:1px solid rgba(79,140,255,.35);border-radius:6px;padding:1px 5px;white-space:nowrap;
@@ -315,6 +322,8 @@
     .chip{padding:0;background:transparent;border:0;width:7px;height:7px;border-radius:50%;overflow:hidden;position:relative}
     .chip i{width:100%;height:100%;display:block}
     .chip b{display:none}
+    .chip.vac{width:8px;height:8px;background:transparent;border:2px solid var(--c);padding:0}
+    .chip.vac .palm{display:none}
     .chip.more{width:auto;height:auto;font-size:9px;background:transparent}
     .chip.more::after{content:attr(data-n);color:var(--muted)}
     .dnum{font-size:11.5px;width:21px;height:21px}
@@ -365,7 +374,7 @@
       <div class="weekdays" id="weekdays"></div>
       <div class="grid" id="grid"></div>
       <div class="legend" id="legend"></div>
-      <p class="hint" style="margin-top:10px">Нажмите на любой день, чтобы поставить смену, выходной или поменять время.</p>
+      <p class="hint" style="margin-top:10px">Нажмите на любой день, чтобы поставить смену, выходной, отпуск или поменять время. 🌴 — отпуск (на телефоне — цветное кольцо).</p>
     </section>
 
     <aside class="sidebar">
@@ -830,33 +839,35 @@
 
       const chips = document.createElement("span");
       chips.className = "chips";
-      const workers = visible.filter(p => dayStatus(p, ds).work);
-      const hasNight = workers.some(p => dayStatus(p, ds).shift === "night");
-      if (hasNight) btn.classList.add("night");
-      const vacPeople = visible.filter(p => dayStatus(p, ds).vacation);
-      if (vacPeople.length) {
-        btn.classList.add("vac");
-        const vm = document.createElement("span");
-        vm.className = "vac-mark";
-        vm.textContent = "🌴";
-        vm.title = "отпуск: " + vacPeople.map(p => p.name).join(", ");
-        btn.appendChild(vm);
-      }
-      const shown = workers.slice(0, 3);
-      shown.forEach(p => {
+      const items = [];
+      visible.forEach(p => {
         const st = dayStatus(p, ds);
+        if (st.work) items.push({ p: p, st: st, vac: false });
+        else if (st.vacation) items.push({ p: p, st: st, vac: true });
+      });
+      if (items.some(x => !x.vac && x.st.shift === "night")) btn.classList.add("night");
+      if (items.some(x => x.vac)) btn.classList.add("vac");
+
+      const shown = items.slice(0, 3);
+      shown.forEach(x => {
         const chip = document.createElement("span");
-        chip.className = "chip";
-        chip.style.setProperty("--c", p.color);
-        chip.title = p.name + (shiftFull(st) ? " · " + shiftFull(st) : "");
-        chip.innerHTML = "<i></i><b>" + esc(p.name) + "</b>" + (st.shift === "night" ? '<em class="moon" title="ночная смена">☾</em>' : "");
+        chip.className = "chip" + (x.vac ? " vac" : "");
+        chip.style.setProperty("--c", x.p.color);
+        if (x.vac) {
+          chip.title = x.p.name + " · отпуск";
+          chip.innerHTML = '<em class="palm">🌴</em><b>' + esc(x.p.name) + "</b>";
+        } else {
+          chip.title = x.p.name + (shiftFull(x.st) ? " · " + shiftFull(x.st) : "");
+          chip.innerHTML = "<i></i><b>" + esc(x.p.name) + "</b>" +
+            (x.st.shift === "night" ? '<em class="moon" title="ночная смена">☾</em>' : "");
+        }
         chips.appendChild(chip);
       });
-      if (workers.length > shown.length) {
+      if (items.length > shown.length) {
         const more = document.createElement("span");
         more.className = "chip more";
-        more.dataset.n = "+" + (workers.length - shown.length);
-        more.textContent = "+" + (workers.length - shown.length);
+        more.dataset.n = "+" + (items.length - shown.length);
+        more.textContent = "+" + (items.length - shown.length);
         chips.appendChild(more);
       }
       btn.appendChild(chips);
