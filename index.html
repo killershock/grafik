@@ -452,6 +452,15 @@
       </div>
       <div class="divider"></div>
       <div class="field">
+        <label>Версия и обновление</label>
+        <div class="row2" style="align-items:center">
+          <span class="hint" style="margin:0">Версия приложения: <b id="appVersion">—</b></span>
+          <button class="ghost-btn" id="btnUpdate" style="padding:11px 12px">Проверить обновление</button>
+        </div>
+        <p class="hint">Если вышла новая версия, приложение перезагрузится и подтянет её. Данные сохранятся.</p>
+      </div>
+      <div class="divider"></div>
+      <div class="field">
         <label>Резервная копия</label>
         <div class="row2">
           <button class="ghost-btn" id="btnExport" style="padding:11px 12px">⬇ Экспорт файла</button>
@@ -497,6 +506,9 @@
   const WD_MIN = ["вс","пн","вт","ср","чт","пт","сб"];
 
   const COLORS = ["#4f8cff","#ff6b6b","#2ecc71","#f5a623","#b06bff","#00c2c7","#ff8fab","#9ad34f","#ff8a3d","#5ce1e6"];
+
+  // Меняется при каждой публикации — видно в настройках, чтобы понять, свежая ли версия
+  const APP_VERSION = "9";
 
   /* ================= состояние ================= */
   const KEY = "grafik.v1";
@@ -1555,6 +1567,34 @@
     deferredPrompt = null;
     setupInstall();
   });
+
+  /* ================= обновление ================= */
+  $("#appVersion").textContent = APP_VERSION;
+
+  $("#btnUpdate").addEventListener("click", async () => {
+    const btn = $("#btnUpdate");
+    btn.disabled = true;
+    btn.textContent = "Проверяю…";
+    try {
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.update().catch(() => {})));
+      }
+    } catch (e) {}
+    // обходим кэш браузера и GitHub Pages: новый адрес = свежие файлы
+    const u = new URL(location.href);
+    u.searchParams.set("v", String(Date.now()));
+    location.replace(u.toString());
+  });
+
+  if ("serviceWorker" in navigator) {
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      location.reload();
+    });
+  }
 
   /* ================= старт ================= */
   if (isStandalone()) document.body.classList.add("standalone");

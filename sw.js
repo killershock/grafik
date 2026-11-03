@@ -1,6 +1,6 @@
 ﻿/* РћС„Р»Р°Р№РЅ-РєСЌС€ РїСЂРёР»РѕР¶РµРЅРёСЏ В«Р“СЂР°С„РёРєРё СЂР°Р±РѕС‚С‹В» */
-const CACHE = "grafik-v8";
-const VERSION = "8";
+const CACHE = "grafik-v9";
+const VERSION = "9";
 const ASSETS = [
   "./",
   "./index.html",
@@ -43,7 +43,7 @@ self.addEventListener("fetch", event => {
   // РќРµСѓРґР°С‡РЅС‹Рµ РѕС‚РІРµС‚С‹ (РЅРµС‚ СЃРµС‚Рё, 5xx) С‚РѕР¶Рµ СЃС‡РёС‚Р°РµРј РїРѕРІРѕРґРѕРј РѕС‚РґР°С‚СЊ РєСЌС€.
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req).then(res => {
+      fetch(req, { cache: "no-store" }).then(res => {
         if (!res || !res.ok) throw new Error("bad response");
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put("./index.html", copy)).catch(() => {});
