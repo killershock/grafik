@@ -138,6 +138,18 @@
     font-size:10.5px;font-weight:700;color:#b8d1ff;background:rgba(79,140,255,.14);
     border:1px solid rgba(79,140,255,.35);border-radius:6px;padding:1px 5px;white-space:nowrap;
   }
+  .cell.vac{background:#152a37}
+  .vac-mark{position:absolute;right:5px;bottom:3px;font-size:11px;line-height:1;opacity:.9;pointer-events:none}
+  .vac-badge{
+    font-size:10.5px;font-weight:700;color:#9df0d8;background:rgba(0,194,199,.14);
+    border:1px solid rgba(0,194,199,.4);border-radius:6px;padding:1px 5px;white-space:nowrap;
+  }
+  .vac-note{padding-top:2px}
+  .vac-list{display:grid;gap:8px}
+  .vac-row{display:flex;gap:6px;align-items:center}
+  .vac-row .inp{flex:1;min-width:0;padding:8px 9px;font-size:13px}
+  .vac-row .vdash{color:var(--muted);flex:none;font-size:12px}
+  .vac-row .minibtn{flex:none;padding:8px 10px}
   .chip{
     display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.25;
     background:rgba(255,255,255,.05);
@@ -220,6 +232,7 @@
   .minibtn:hover{color:var(--txt);border-color:#3d5170}
   .minibtn.on{background:rgba(46,204,113,.16);border-color:rgba(46,204,113,.5);color:#7ff0a8}
   .minibtn.on.off{background:rgba(255,107,107,.14);border-color:rgba(255,107,107,.45);color:#ff9b9b}
+  .minibtn.on.vac{background:rgba(0,194,199,.16);border-color:rgba(0,194,199,.5);color:#9df0d8}
   .minibtn.link{border-color:transparent;background:transparent;text-decoration:underline;color:var(--muted);padding:6px 4px}
   .time-in{
     background:var(--card2);border:1px solid var(--line2);border-radius:9px;color:var(--txt);
@@ -273,6 +286,8 @@
     text-align:center;padding:3px 0 4px;position:relative;
   }
   .pv.night::after{content:"☾";position:absolute;top:0;right:3px;font-size:8px;color:#9dc0ff}
+  .pv.vac{border-color:rgba(0,194,199,.45);background:rgba(0,194,199,.1)}
+  .pv.vac .s{color:#5ce1e6}
   .pv .d{font-size:9px;color:var(--muted);display:block}
   .pv .s{font-size:11px;font-weight:700;display:block;margin-top:1px;color:#6b7c99}
   .pv.work{border-color:rgba(46,204,113,.4);background:rgba(46,204,113,.1)}
@@ -526,6 +541,7 @@
           nightStart: validTime(p.cycle && p.cycle.nightStart, "20:00"),
           nightEnd: validTime(p.cycle && p.cycle.nightEnd, "08:00")
         },
+        vacations: normalizeVacations(p.vacations),
         week: {
           days: Array.isArray(p.week && p.week.days) ? p.week.days.filter(d => d >= 0 && d <= 6) : [1,2,3,4,5],
           nightDays: Array.isArray(p.week && p.week.nightDays)
@@ -542,6 +558,16 @@
     if (!out.people.length) out.people = defaultState().people;
     if (!out.people.some(p => p.isMe)) out.people[0].isMe = true;
     return out;
+  }
+
+  function normalizeVacations(list){
+    if (!Array.isArray(list)) return [];
+    const iso = v => /^\d{4}-\d{2}-\d{2}$/.test(v);
+    return list.filter(v => v && iso(v.from) && iso(v.to)).map(v => ({
+      id: v.id || uid(),
+      from: v.from <= v.to ? v.from : v.to,
+      to: v.from <= v.to ? v.to : v.from
+    }));
   }
 
   function normalizeOverrides(o){
@@ -654,6 +680,15 @@
     return WD_FULL[d.getDay()] + ", " + d.getDate() + " " + MONTHS_GEN[d.getMonth()] + " " + d.getFullYear();
   }
 
+  /** Отпуск, в который попадает дата (или null) */
+  function vacationAt(p, dateStr){
+    const list = p.vacations || [];
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].from <= dateStr && dateStr <= list[i].to) return list[i];
+    }
+    return null;
+  }
+
   /** Статус человека в конкретный день */
   function dayStatus(p, dateStr){
     const ov = p.overrides[dateStr];
@@ -669,6 +704,10 @@
         shift: work ? (shiftMeta({ start: start, end: end }).overnight ? "night" : "day") : "off",
         override: true
       };
+    }
+    const vac = vacationAt(p, dateStr);
+    if (vac) {
+      return { work: false, start: "", end: "", shift: "off", vacation: true, override: false };
     }
     if (p.mode === "cycle") {
       const len = p.cycle.pattern.length || 1;
@@ -745,9 +784,11 @@
     const today = ymd(new Date());
     const d = parseYmd(today);
     const working = state.people.filter(p => dayStatus(p, today).work);
+    const onVac = state.people.filter(p => dayStatus(p, today).vacation);
     let s = "Сегодня " + WD_MIN[d.getDay()] + ", " + d.getDate() + " " + MONTHS_GEN[d.getMonth()] + " · ";
     if (!working.length) s += "никто не работает";
     else s += "работают: " + working.map(p => p.name + " (" + shiftFull(dayStatus(p, today)) + ")").join(", ");
+    if (onVac.length) s += " · 🌴 в отпуске: " + onVac.map(p => p.name).join(", ");
     $("#todayLine").innerHTML = esc(s);
   }
 
@@ -792,6 +833,15 @@
       const workers = visible.filter(p => dayStatus(p, ds).work);
       const hasNight = workers.some(p => dayStatus(p, ds).shift === "night");
       if (hasNight) btn.classList.add("night");
+      const vacPeople = visible.filter(p => dayStatus(p, ds).vacation);
+      if (vacPeople.length) {
+        btn.classList.add("vac");
+        const vm = document.createElement("span");
+        vm.className = "vac-mark";
+        vm.textContent = "🌴";
+        vm.title = "отпуск: " + vacPeople.map(p => p.name).join(", ");
+        btn.appendChild(vm);
+      }
       const shown = workers.slice(0, 3);
       shown.forEach(p => {
         const st = dayStatus(p, ds);
@@ -839,6 +889,7 @@
     const today = ymd(new Date());
     const tl = $("#todayList");
     const working = state.people.filter(p => dayStatus(p, today).work);
+    const onVac = state.people.filter(p => dayStatus(p, today).vacation);
     if (!working.length) {
       tl.innerHTML = '<div class="empty">Сегодня по графикам никто не работает. Хороший день 🌿</div>';
     } else {
@@ -847,11 +898,19 @@
         return personRow(p, shiftFull(st) || "смена");
       }).join("");
     }
+    if (onVac.length) {
+      tl.insertAdjacentHTML("beforeend",
+        '<div class="empty vac-note">🌴 В отпуске: ' + esc(onVac.map(p => p.name).join(", ")) + "</div>");
+    }
 
     const pl = $("#peopleList");
     pl.innerHTML = state.people.map(p => {
       const inf = patternInfo(p);
-      return personRow(p, inf.label + (inf.text ? " · " + inf.text : ""));
+      const vac = vacationAt(p, today);
+      const sub = vac
+        ? "🌴 отпуск до " + shortDate(vac.to)
+        : inf.label + (inf.text ? " · " + inf.text : "");
+      return personRow(p, sub);
     }).join("");
 
     const up = $("#upcoming");
@@ -892,15 +951,18 @@
       const st = dayStatus(p, dateStr);
       const timeText = st.work ? shiftText(st) : "";
       const meta = shiftMeta(st);
+      const vac = st.vacation ? vacationAt(p, dateStr) : null;
       const nightBadge = (st.work && st.shift === "night")
         ? ' <span class="night-badge">☾ ночь · ' + meta.duration + "</span>" : "";
+      const vacBadge = vac ? ' <span class="vac-badge">🌴 до ' + shortDate(vac.to) + "</span>" : "";
       return '<div class="day-row" data-person="' + p.id + '">' +
         '<span class="who"><span class="dot" style="--c:' + p.color + '"></span>' +
         '<span class="nm">' + esc(p.name) + (p.isMe ? ' <span class="me" style="font-size:10px;color:#7ab0ff">я</span>' : "") + "</span></span>" +
-        '<span class="status' + (st.work ? " work" : "") + '">' + (st.work ? "Смена" : "Выходной") + nightBadge + "</span>" +
+        '<span class="status' + (st.work ? " work" : "") + '">' + (vac ? "Отпуск" : st.work ? "Смена" : "Выходной") + nightBadge + vacBadge + "</span>" +
         '<div class="row-actions">' +
         '<button class="minibtn' + (st.work ? " on" : "") + '" data-set-work="' + p.id + '">Работает</button>' +
-        '<button class="minibtn' + (!st.work ? " on off" : "") + '" data-set-off="' + p.id + '">Выходной</button>' +
+        '<button class="minibtn' + (!st.work && !vac ? " on off" : "") + '" data-set-off="' + p.id + '">Выходной</button>' +
+        '<button class="minibtn' + (vac ? " on vac" : "") + '" data-vac="' + p.id + '">' + (vac ? "✕ отпуск" : "🌴 отпуск") + "</button>" +
         '<button class="minibtn" data-flip="' + p.id + '">' +
         (st.work && st.shift === "night" ? "☀ день" : "☾ ночь") + "</button>" +
         (st.override ? '<button class="minibtn link" data-reset="' + p.id + '">вернуть по графику</button>' : "") +
@@ -915,7 +977,8 @@
 
     body.insertAdjacentHTML("beforeend",
       '<p class="hint" style="margin-top:12px">Кнопки «Работает» / «Выходной» ставят отметку только на этот день — это не меняет общий график.' +
-      "<br>Кнопка «☾ ночь» делает смену ночной, «☀ день» — обратно (время берётся из настроек человека).</p>");
+      "<br>Кнопка «☾ ночь» делает смену ночной, «☀ день» — обратно (время берётся из настроек человека)." +
+      "<br>Кнопка «🌴 отпуск» отмечает отпуск на этот день, повторное нажатие его снимает.</p>");
 
     openModal("#dayModal");
   }
@@ -958,6 +1021,7 @@
         timeStart: "09:00", timeEnd: "18:00",
         nightStart: "20:00", nightEnd: "08:00"
       },
+      vacations: [],
       overrides: {}
     };
     draftId = src ? src.id : null;
@@ -1023,6 +1087,11 @@
       "</div>" +
       '<p class="hint">Ночная смена переходит через полночь: в календаре такие дни помечены «☾», а в списках время идёт с «+1».</p></div>';
 
+    const vacBlock =
+      '<div class="field"><label>🌴 Отпуска</label><div class="vac-list" id="vacList"></div>' +
+      '<button type="button" class="ghost-btn wide" id="addVac" style="margin-top:8px">+ Добавить отпуск</button>' +
+      '<p class="hint">В дни отпуска график не действует — человек не работает. В календаре такие дни помечены пальмой.</p></div>';
+
     body.innerHTML =
       '<div class="field"><label>Имя</label>' +
       '<input class="inp" type="text" id="pName" maxlength="40" placeholder="Например: Аня" value="' + esc(d.name) + '"></div>' +
@@ -1032,7 +1101,7 @@
       '<div class="field"><label class="check"><input type="checkbox" id="pIsMe"' + (d.isMe ? " checked" : "") + "> Это я</label></div>" +
       '<div class="field"><label>Как задаётся график</label><div class="seg" id="modeSeg">' +
       modeBtn("cycle", "Цикл смен") + modeBtn("week", "Дни недели") + modeBtn("manual", "Вручную") +
-      "</div></div>" + modeFields + times +
+      "</div></div>" + modeFields + times + vacBlock +
       '<div class="sheet-actions">' +
       (draftId ? '<button class="danger-btn" type="button" id="pDelete">Удалить</button>' : "") +
       '<button class="primary-btn" type="button" id="pSave">Сохранить</button></div>' +
@@ -1149,6 +1218,48 @@
       renderPersonForm();
     }));
 
+    function renderVacations(){
+      const box = $("#vacList", body);
+      if (!box) return;
+      const list = draft.vacations || [];
+      box.innerHTML = list.length
+        ? list.map((v, i) =>
+            '<div class="vac-row" data-vi="' + i + '">' +
+            '<input class="inp" type="date" data-vfrom="' + i + '" value="' + v.from + '" aria-label="Начало отпуска">' +
+            '<span class="vdash">—</span>' +
+            '<input class="inp" type="date" data-vto="' + i + '" value="' + v.to + '" aria-label="Конец отпуска">' +
+            '<button type="button" class="minibtn" data-vdel="' + i + '" aria-label="Удалить отпуск">✕</button>' +
+            "</div>").join("")
+        : '<div class="empty" style="padding:2px 0">Пока нет отпусков</div>';
+    }
+    renderVacations();
+
+    const addVac = $("#addVac", body);
+    if (addVac) addVac.addEventListener("click", () => {
+      draft.vacations = draft.vacations || [];
+      const t = ymd(new Date());
+      draft.vacations.push({ id: uid(), from: t, to: addDays(t, 6) });
+      renderVacations();
+    });
+
+    const vacList = $("#vacList", body);
+    if (vacList) {
+      vacList.addEventListener("input", e => {
+        const f = e.target.closest("[data-vfrom]");
+        const t = e.target.closest("[data-vto]");
+        if (!f && !t) return;
+        const idx = Number(f ? f.dataset.vfrom : t.dataset.vto);
+        if (f) draft.vacations[idx].from = f.value;
+        if (t) draft.vacations[idx].to = t.value;
+      });
+      vacList.addEventListener("click", e => {
+        const d = e.target.closest("[data-vdel]");
+        if (!d) return;
+        draft.vacations.splice(Number(d.dataset.vdel), 1);
+        renderVacations();
+      });
+    }
+
     $("#pSave", body).addEventListener("click", savePerson);
     const del = $("#pDelete", body);
     if (del) del.addEventListener("click", deletePerson);
@@ -1167,9 +1278,10 @@
       const st = dayStatus(d, ds);
       const dd = parseYmd(ds);
       const night = st.shift === "night";
-      const letter = night ? "Н" : st.shift === "day" ? "Д" : "В";
-      html += '<span class="pv' + (st.work ? " work" : "") + (night ? " night" : "") + '"' +
-        (st.work ? ' title="' + (night ? "ночная смена " : "дневная смена ") + shiftFull(st) + '"' : "") + ">" +
+      const vacation = !!st.vacation;
+      const letter = vacation ? "О" : night ? "Н" : st.shift === "day" ? "Д" : "В";
+      html += '<span class="pv' + (st.work ? " work" : "") + (night ? " night" : "") + (vacation ? " vac" : "") + '"' +
+        (vacation ? ' title="отпуск"' : st.work ? ' title="' + (night ? "ночная смена " : "дневная смена ") + shiftFull(st) + '"' : "") + ">" +
         '<span class="d">' + WD_MIN[dd.getDay()] + " " + dd.getDate() + '</span>' +
         '<span class="s">' + letter + "</span></span>";
     }
@@ -1181,6 +1293,7 @@
     if (!name) { toast("Введите имя"); $("#pName").focus(); return; }
     draft.name = name;
     draft.cycle.pattern = normPattern(draft.cycle.pattern) || "ДДВВ";
+    draft.vacations = normalizeVacations(draft.vacations);
     if (draft.isMe) state.people.forEach(p => { if (p.id !== draft.id) p.isMe = false; });
 
     const idx = state.people.findIndex(p => p.id === draft.id);
@@ -1281,6 +1394,23 @@
     if (o) { setOverride(o.dataset.setOff, "off", dateStr); openDay(dateStr); return; }
     const r = e.target.closest("[data-reset]");
     if (r) { setOverride(r.dataset.reset, "clear", dateStr); openDay(dateStr); return; }
+    const vb = e.target.closest("[data-vac]");
+    if (vb) {
+      const p = state.people.find(x => x.id === vb.dataset.vac);
+      if (p) {
+        const vac = vacationAt(p, dateStr);
+        p.vacations = p.vacations || [];
+        if (vac) {
+          p.vacations = p.vacations.filter(v => v.id !== vac.id);
+        } else {
+          p.vacations.push({ id: uid(), from: dateStr, to: dateStr });
+          delete p.overrides[dateStr];
+        }
+        renderAll();
+        openDay(dateStr);
+      }
+      return;
+    }
     const fl = e.target.closest("[data-flip]");
     if (fl) {
       const p = state.people.find(x => x.id === fl.dataset.flip);

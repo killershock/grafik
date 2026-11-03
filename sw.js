@@ -1,5 +1,5 @@
 /* Офлайн-кэш приложения «Графики работы» */
-const CACHE = "grafik-v5";
+const CACHE = "grafik-v6";
 const ASSETS = [
   "./",
   "./index.html",
