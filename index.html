@@ -113,10 +113,8 @@
   .weekdays span{text-align:center;font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 0}
   .weekdays span:nth-child(6),.weekdays span:nth-child(7){color:#ff9b9b99}
   .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-  #grid.anim-next{animation:monthNext .22s ease-out}
-  #grid.anim-prev{animation:monthPrev .22s ease-out}
-  @keyframes monthNext{from{opacity:.35;transform:translateX(34px)}to{opacity:1;transform:none}}
-  @keyframes monthPrev{from{opacity:.35;transform:translateX(-34px)}to{opacity:1;transform:none}}
+  .cal-card{position:relative;overflow:hidden}
+  .grid-ghost{position:absolute;pointer-events:none;z-index:2;margin:0}
   .cell{
     position:relative;border:1px solid var(--line);background:var(--card2);border-radius:12px;
     padding:6px 6px 5px;min-height:96px;text-align:left;display:flex;flex-direction:column;gap:4px;
@@ -512,7 +510,7 @@
   const COLORS = ["#4f8cff","#ff6b6b","#2ecc71","#f5a623","#b06bff","#00c2c7","#ff8fab","#9ad34f","#ff8a3d","#5ce1e6"];
 
   // Меняется при каждой публикации — видно в настройках, чтобы понять, свежая ли версия
-  const APP_VERSION = "10";
+  const APP_VERSION = "11";
 
   /* ================= состояние ================= */
   const KEY = "grafik.v1";
@@ -1389,14 +1387,56 @@
 
   /* ================= события ================= */
   function changeMonth(delta){
+    const grid = $("#grid");
+    const card = document.querySelector(".cal-card");
+    if (!grid || !card) { renderCalendar(); return; }
+
+    // если свайпают быстро — убираем остатки прошлой анимации
+    card.querySelectorAll(".grid-ghost").forEach(el => el.remove());
+    grid.style.transition = "";
+    grid.style.transform = "";
+    grid.style.opacity = "";
+
+    // снимок текущего месяца: он будет плавно «уезжать» в сторону
+    const ghost = grid.cloneNode(true);
+    ghost.removeAttribute("id");
+    ghost.classList.add("grid-ghost");
+    ghost.style.left = grid.offsetLeft + "px";
+    ghost.style.top = grid.offsetTop + "px";
+    ghost.style.width = grid.offsetWidth + "px";
+    card.appendChild(ghost);
+
     viewMonth += delta;
     if (viewMonth < 0) { viewMonth = 11; viewYear--; }
     if (viewMonth > 11) { viewMonth = 0; viewYear++; }
     renderCalendar();
-    const grid = $("#grid");
-    grid.classList.remove("anim-next", "anim-prev");
-    void grid.offsetWidth; // перезапуск анимации
-    grid.classList.add(delta > 0 ? "anim-next" : "anim-prev");
+
+    // новый месяц въезжает с противоположной стороны
+    const shift = 48;
+    grid.style.transition = "none";
+    grid.style.transform = "translateX(" + (delta > 0 ? shift : -shift) + "px)";
+    grid.style.opacity = "0";
+    grid.style.willChange = "transform, opacity";
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const ease = "transform .3s cubic-bezier(.22,.61,.36,1), opacity .3s ease";
+        ghost.style.transition = ease;
+        ghost.style.transform = "translateX(" + (delta > 0 ? -shift : shift) + "px)";
+        ghost.style.opacity = "0";
+        grid.style.transition = ease;
+        grid.style.transform = "translateX(0)";
+        grid.style.opacity = "1";
+      });
+    });
+
+    setTimeout(() => {
+      ghost.remove();
+      grid.style.transition = "";
+      grid.style.transform = "";
+      grid.style.opacity = "";
+      grid.style.willChange = "";
+    }, 340);
   }
 
   $("#prevMonth").addEventListener("click", () => changeMonth(-1));

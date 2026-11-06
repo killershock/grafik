@@ -1,6 +1,6 @@
 ﻿/* РћС„Р»Р°Р№РЅ-РєСЌС€ РїСЂРёР»РѕР¶РµРЅРёСЏ В«Р“СЂР°С„РёРєРё СЂР°Р±РѕС‚С‹В» */
-const CACHE = "grafik-v10";
-const VERSION = "10";
+const CACHE = "grafik-v11";
+const VERSION = "11";
 const ASSETS = [
   "./",
   "./index.html",
